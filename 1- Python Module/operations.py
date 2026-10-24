@@ -1,8 +1,34 @@
+# Shared logic used by both CLI and GUI.
+def get_employee_info(employee):
+    return {
+        "name": employee["name"],
+        "department": employee["department"],
+        "salary": employee["salary"],
+        "absence_days": employee["absence_days"],
+    }
 
+
+def get_bonus(employee):
+    return employee["salary"] * 0.10
+
+
+def get_discount(employee):
+    return employee["salary"] * 0.05
+
+
+def get_remaining_holidays(employee):
+    return employee["remaining_holidays"]
+
+
+def is_employee_id_valid(employee, emp_id):
+    return str(employee["id"]) == str(emp_id).strip()
+
+
+# Original CLI functions are preserved.
 def check_employee_id(employee):
     emp_id = input("Enter Employee ID: ")
 
-    if emp_id != str(employee["id"]):
+    if not is_employee_id_valid(employee, emp_id):
         print("Access denied! Invalid Employee ID.")
         return False
 
@@ -13,19 +39,19 @@ def display_info(employee):
     if not check_employee_id(employee):
         return
 
+    info = get_employee_info(employee)
     print("\nEmployee Information:")
-    print("Name:", employee["name"])
-    print("Department:", employee["department"])
-    print("Salary: $", employee["salary"])
-    print("Days of Absence:", employee["absence_days"])
+    print("Name:", info["name"])
+    print("Department:", info["department"])
+    print("Salary: $", info["salary"])
+    print("Days of Absence:", info["absence_days"])
 
 
 def calculate_bonus(employee):
     if not check_employee_id(employee):
         return
 
-    bonus = employee["salary"] * 0.10
-
+    bonus = get_bonus(employee)
     print("\nBonus Calculation:")
     print("Bonus: $", bonus)
 
@@ -34,8 +60,7 @@ def calculate_discount(employee):
     if not check_employee_id(employee):
         return
 
-    discount = employee["salary"] * 0.05
-
+    discount = get_discount(employee)
     print("\nDiscount Calculation:")
     print("Discount: $", discount)
 
@@ -45,5 +70,4 @@ def remind_holidays(employee):
         return
 
     print("\nReminder:")
-    print("Remaining Legal Holidays:",
-          employee["remaining_holidays"])
+    print("Remaining Legal Holidays:", get_remaining_holidays(employee))
