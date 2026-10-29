@@ -10,12 +10,23 @@ from operations import (
     is_employee_id_valid,
 )
 
+# Visual settings: changing these does not change the CLI or calculations.
+BG = "#F3F6FB"
+CARD = "#FFFFFF"
+NAVY = "#172B4D"
+BLUE = "#2563EB"
+BLUE_HOVER = "#1D4ED8"
+TEXT = "#24344D"
+MUTED = "#64748B"
+BORDER = "#DCE4EF"
+
 
 def start_gui():
     window = tk.Tk()
     window.title("Employee Management System")
-    window.geometry("520x520")
-    window.resizable(False, False)
+    window.geometry("570x610")
+    window.minsize(490, 550)
+    window.configure(bg=BG)
 
     attempts = 0
     logged_in_employee = None
@@ -24,18 +35,72 @@ def start_gui():
         for widget in window.winfo_children():
             widget.destroy()
 
-    def add_title(text):
-        tk.Label(window, text=text, font=("Arial", 17, "bold")).pack(pady=24)
+    def label(parent, text, size=11, bold=False, color=TEXT, bg=CARD):
+        return tk.Label(
+            parent, text=text, bg=bg, fg=color,
+            font=("Segoe UI", size, "bold" if bold else "normal"),
+        )
+
+    def button(parent, text, command, primary=True):
+        background = BLUE if primary else CARD
+        foreground = "white" if primary else NAVY
+        widget = tk.Button(
+            parent, text=text, command=command,
+            bg=background, fg=foreground,
+            activebackground=BLUE_HOVER if primary else BG,
+            activeforeground="white" if primary else NAVY,
+            font=("Segoe UI", 11, "bold"),
+            relief="flat", bd=0, cursor="hand2",
+            padx=16, pady=12, highlightthickness=0,
+        )
+        widget.bind("<Enter>", lambda event: widget.config(
+            bg=BLUE_HOVER if primary else BG))
+        widget.bind("<Leave>", lambda event: widget.config(bg=background))
+        return widget
+
+    def entry(parent, show=None):
+        widget = tk.Entry(
+            parent, font=("Segoe UI", 12),
+            bg="#FAFCFF", fg=TEXT, insertbackground=TEXT,
+            relief="solid", bd=1, highlightthickness=1,
+            highlightbackground=BORDER, highlightcolor=BLUE,
+            show=show,
+        )
+        return widget
+
+    def page(title, subtitle):
+        clear_window()
+        header = tk.Frame(window, bg=NAVY, height=150)
+        header.pack(fill="x")
+        header.pack_propagate(False)
+        label(header, "EMPLOYEE MANAGEMENT", 10, True, "#BFDBFE", NAVY).pack(
+            anchor="w", padx=36, pady=(23, 4))
+        label(header, title, 22, True, "white", NAVY).pack(
+            anchor="w", padx=36)
+        label(header, subtitle, 10, False, "#CBD5E1", NAVY).pack(
+            anchor="w", padx=36, pady=(5, 0))
+
+        outer = tk.Frame(window, bg=BG)
+        outer.pack(fill="both", expand=True, padx=26, pady=24)
+        card = tk.Frame(outer, bg=CARD, highlightbackground=BORDER,
+                        highlightthickness=1)
+        card.pack(fill="both", expand=True)
+        inner = tk.Frame(card, bg=CARD)
+        inner.pack(fill="both", expand=True, padx=28, pady=24)
+        return inner
 
     def show_login():
-        clear_window()
-        add_title("Employee Management System")
-        tk.Label(window, text="Employee ID").pack()
-        id_entry = tk.Entry(window, width=30)
-        id_entry.pack(pady=7)
-        tk.Label(window, text="Password").pack()
-        password_entry = tk.Entry(window, show="*", width=30)
-        password_entry.pack(pady=7)
+        content = page("Welcome back", "Sign in to access your employee account")
+        label(content, "Employee ID", 11, True).pack(anchor="w", pady=(10, 6))
+        id_entry = entry(content)
+        id_entry.pack(fill="x", ipady=9)
+
+        label(content, "Password", 11, True).pack(anchor="w", pady=(20, 6))
+        password_entry = entry(content, show="*")
+        password_entry.pack(fill="x", ipady=9)
+
+        status = label(content, "You have 3 login attempts.", 10, color=MUTED)
+        status.pack(anchor="w", pady=(14, 24))
 
         def submit_login():
             nonlocal attempts, logged_in_employee
@@ -45,18 +110,30 @@ def start_gui():
                 messagebox.showinfo("Success", "Login successful!")
                 show_menu()
                 return
+
             attempts += 1
             if attempts >= 3:
                 messagebox.showerror("Access denied", "Too many failed attempts.")
                 window.destroy()
             else:
-                messagebox.showerror("Login failed", f"Invalid ID or password. {3 - attempts} attempts left.")
+                remaining = 3 - attempts
+                status.config(text=f"{remaining} login attempt(s) remaining.")
+                messagebox.showerror(
+                    "Login failed",
+                    f"Invalid ID or password. {remaining} attempts left.",
+                )
+                password_entry.delete(0, tk.END)
+                password_entry.focus_set()
 
-        tk.Button(window, text="Login", command=submit_login, width=22).pack(pady=20)
+        button(content, "Log in", submit_login).pack(fill="x")
+        password_entry.bind("<Return>", lambda event: submit_login())
+        id_entry.bind("<Return>", lambda event: password_entry.focus_set())
+        id_entry.focus_set()
 
     def show_menu():
-        clear_window()
-        add_title("Employee Main Menu")
+        content = page("Main menu", "Choose an employee service")
+        label(content, f"Signed in as {logged_in_employee['name']}",
+              11, True).pack(anchor="w", pady=(2, 18))
         options = [
             ("Display Employee Information", "info"),
             ("Calculate Bonus", "bonus"),
@@ -64,23 +141,21 @@ def start_gui():
             ("Remind Legal Holidays", "holidays"),
         ]
         for title, kind in options:
-            tk.Button(
-                window,
-                text=title,
-                width=32,
-                height=2,
-                command=lambda t=title, k=kind: show_operation(t, k),
-            ).pack(pady=7)
-        tk.Button(window, text="Exit", width=32, command=window.destroy).pack(pady=12)
+            button(content, title, lambda t=title, k=kind:
+                   show_operation(t, k)).pack(fill="x", pady=6)
+        button(content, "Exit", window.destroy, primary=False).pack(
+            fill="x", pady=(18, 0))
 
     def show_operation(title, kind):
-        clear_window()
-        add_title(title)
-        tk.Label(window, text="Enter Employee ID:").pack()
-        id_entry = tk.Entry(window, width=30)
-        id_entry.pack(pady=10)
-        result_label = tk.Label(window, text="", font=("Arial", 12), justify="left")
-        result_label.pack(pady=20)
+        content = page(title, "Verify your Employee ID to continue")
+        label(content, "Employee ID", 11, True).pack(
+            anchor="w", pady=(8, 6))
+        id_entry = entry(content)
+        id_entry.pack(fill="x", ipady=9)
+
+        result_label = label(content, "", 12, color=NAVY)
+        result_label.config(justify="left", anchor="w", wraplength=390)
+        result_label.pack(fill="x", pady=(24, 14))
 
         def submit():
             if not is_employee_id_valid(logged_in_employee, id_entry.get()):
@@ -100,11 +175,17 @@ def start_gui():
             elif kind == "discount":
                 result = f"Discount: ${get_discount(logged_in_employee):.2f}"
             else:
-                result = f"Remaining Legal Holidays: {get_remaining_holidays(logged_in_employee)}"
+                result = (
+                    "Remaining Legal Holidays: "
+                    f"{get_remaining_holidays(logged_in_employee)}"
+                )
             result_label.config(text=result)
 
-        tk.Button(window, text="Submit", command=submit, width=20).pack(pady=8)
-        tk.Button(window, text="Back to Menu", command=show_menu, width=20).pack(pady=8)
+        button(content, "Submit", submit).pack(fill="x", pady=7)
+        button(content, "Back to Menu", show_menu, primary=False).pack(
+            fill="x", pady=7)
+        id_entry.bind("<Return>", lambda event: submit())
+        id_entry.focus_set()
 
     show_login()
     window.mainloop()
