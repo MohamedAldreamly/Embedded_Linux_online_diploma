@@ -1,4 +1,4 @@
-[Uint]
+[Unit]
 Description=Hello World Service
 After=network.target
 
