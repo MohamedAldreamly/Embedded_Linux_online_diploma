@@ -45,3 +45,4 @@ content = "Hello, world!\nThis is a simple file write example."
 
 # Calls the function and passes the filename and content.
 write_to_file(filename, content)
+
