@@ -246,6 +246,45 @@ devices_management() {
     done
 }
 
+network_info() {
+
+    echo "===== NETWORK INFORMATION ====="
+
+    # IP Address
+    echo "IP Address: $(hostname -I)"
+
+    # DNS
+    dns=$(grep -m 1 '^nameserver' /etc/resolv.conf | tr -s ' ' | cut -d ' ' -f 2)
+    echo "DNS Server: $dns"
+
+    # Network Interface
+    interface=$(ip route show default | grep -oP 'dev \K\S+' | head -n 1)
+
+    if [[ -z "$interface" ]]; then
+        echo "Network Interface: Not Available"
+        return 1
+    fi
+
+    # First Reading
+    read -r name rx1 _ _ _ _ _ _ _ tx1 _ < <(
+        grep "$interface:" /proc/net/dev
+    )
+
+    sleep 1
+
+    # Second Reading
+    read -r name rx2 _ _ _ _ _ _ _ tx2 _ < <(
+        grep "$interface:" /proc/net/dev
+    )
+
+    # Calculate
+    download=$(((rx2 - rx1) / 1024))
+    upload=$(((tx2 - tx1) / 1024))
+
+    echo "Download Rate: $download KiB/s"
+    echo "Upload Rate: $upload KiB/s"
+}
+
 while true; do 
 
     echo "===================="
@@ -277,11 +316,7 @@ while true; do
             disk_info
             ;;
         2)  
-            if [[ $MODE == "ADMIN" ]]; then 
-                devices_management
-            else 
-                echo "access denied"
-            fi
+            network_info
             ;;
         3)
             ;;    
@@ -300,10 +335,34 @@ while true; do
             fi
             ;;
         6)
-            if [[ $MODE == "ADMIN" ]]; then 
-                echo "6"
-            else 
-                echo "access denied"    
+            if [[ "$MODE" == "ADMIN" ]]; then
+
+                read -rp "Are you sure you want to reboot? (yes/no): " confirm
+
+                if [[ "$confirm" == "yes" ]]; then
+                    reboot
+                else
+                    echo "Reboot Cancelled"
+                fi
+
+            else
+                echo "Access Denied! Admin Only."
+            fi
+            ;;
+
+        7)
+            if [[ "$MODE" == "ADMIN" ]]; then
+
+                read -rp "Are you sure you want to shutdown? (yes/no): " confirm
+
+                if [[ "$confirm" == "yes" ]]; then
+                    systemctl poweroff
+                else
+                    echo "Shutdown Cancelled"
+                fi
+
+            else
+                echo "Access Denied! Admin Only."
             fi
             ;;
         0)
