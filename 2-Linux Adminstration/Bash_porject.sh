@@ -1,5 +1,14 @@
 #!/bin/bash
 
+LOG_FILE="/var/log/bash-project/activity.log"
+
+if [[ ! -w "$LOG_FILE" ]]; then
+    echo "Error: Cannot write to Activity Log"
+    exit 1
+fi
+
+echo "$(date '+%Y-%m-%d %H:%M:%S') | $MODE | Application Started" >> "$LOG_FILE"
+
 USERNAME="user_test"
 
 if [[ $EUID -eq 0 ]]; then
@@ -138,6 +147,7 @@ devices_management() {
         case "$choice" in
 
             1)
+                
                 echo "===== CPU POLICY ====="
 
                 policy="/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
@@ -177,6 +187,7 @@ devices_management() {
                 ;;
 
             2)
+
                 echo "===== BATTERY THRESHOLD ====="
 
                 threshold="/sys/class/power_supply/BAT0/charge_control_end_threshold"
@@ -195,6 +206,7 @@ devices_management() {
                 ;;
 
             3)
+                echo "$(date '+%F %T') | $MODE | Caps Lock LED ON | SUCCESS" >> "$LOG_FILE"
                 echo "===== CAPS LOCK LED ====="
 
                 led="/sys/class/leds/input2::capslock/brightness"
@@ -285,6 +297,8 @@ network_info() {
     echo "Upload Rate: $upload KiB/s"
 }
 
+
+
 while true; do 
 
     echo "===================="
@@ -294,13 +308,14 @@ while true; do
 
     echo "1- System Information"
     echo "2- Network Information"
-    echo "3- Kernal Logs"
-
+    
     if [[ $MODE == "ADMIN" ]]; then 
+        echo "3- Kernal Logs"
         echo "4- Device Managment"
         echo "5- User Delete"
         echo "6- Reboot"
         echo "7- Shutdown"
+        echo "8- View Activity Log"
     fi 
     echo "0- Exit"
 
@@ -308,6 +323,8 @@ while true; do
 
     case "$choice" in
         1)
+            echo "$(date '+%Y-%m-%d %H:%M:%S') | $MODE | System Information Selected" >> "$LOG_FILE"
+            
             echo "=====   CPU Information   ======"
             cpu_usage
             cpu_frequency
@@ -316,17 +333,49 @@ while true; do
             disk_info
             ;;
         2)  
+            echo "$(date '+%Y-%m-%d %H:%M:%S') | $MODE | Network Information Selected" >> "$LOG_FILE"
             network_info
             ;;
         3)
-            ;;    
-        4)
-            if [[ $MODE == "ADMIN" ]]; then 
-                devices_management
-            else 
-                echo "access denied"
+
+            if [[ "$MODE" == "ADMIN" ]]; then
+
+                echo "$(date '+%F %T') | $MODE | Kernel Logs Opened" >> "$LOG_FILE"
+
+            echo "===== REAL-TIME KERNEL LOGS ====="
+            echo "Press ENTER to return to Main Menu"
+
+            journalctl -k -b -f -n 10 &
+            log_pid=$!
+
+            read -r
+
+            kill "$log_pid" 2>/dev/null
+            wait "$log_pid" 2>/dev/null
+
+            echo "$(date '+%F %T') | $MODE | Kernel Logs Closed" >> "$LOG_FILE"
+
+            echo "Returning to Main Menu..."
+
+            else
+                echo "Access Denied!"
+                echo "$(date '+%Y-%m-%d %H:%M:%S') | $MODE | Kernel Logs Denied" >> "$LOG_FILE"
             fi
             ;;
+        
+        4)
+            if [[ "$MODE" == "ADMIN" ]]; then
+
+                echo "$(date '+%Y-%m-%d %H:%M:%S') | $MODE | Devices Management Selected" >> "$LOG_FILE"
+
+                devices_management
+
+            else
+                echo "Access Denied!"
+                echo "$(date '+%Y-%m-%d %H:%M:%S') | $MODE | Devices Management Denied" >> "$LOG_FILE"
+            fi
+            ;;
+
         5)
             if [[ $MODE == "ADMIN" ]]; then     
             delete_user
@@ -365,9 +414,40 @@ while true; do
                 echo "Access Denied! Admin Only."
             fi
             ;;
+        8)
+            echo "$(date '+%F %T') | $MODE | Activity Log Viewed" >> "$LOG_FILE"
+
+            echo "===== ACTIVITY LOG ====="
+            echo "1- Show All Logs"
+            echo "2- Show Last 10 Lines"
+
+            read -rp "Enter Choice: " log_choice
+
+            case "$log_choice" in
+
+                1)
+                    cat "$LOG_FILE"
+                    ;;
+
+                2)
+                    tail -n 10 "$LOG_FILE"
+                    ;;
+
+                *)
+                    echo "Invalid Choice"
+                    ;;
+            esac
+            ;;
         0)
+            if > "$LOG_FILE"; then
+                echo "Activity Log Cleared Successfully."
+            else
+                echo "Failed to Clear Activity Log."
+            fi
+
+            echo "Goodbye!"
             break
-            ;;    
+            ;;   
         *)
             echo "Invalid Choice"
             ;;
