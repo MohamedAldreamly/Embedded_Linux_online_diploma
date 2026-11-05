@@ -123,6 +123,129 @@ disk_info() {
     echo "Free Disk Space: $free_space"
 }
 
+devices_management() {
+
+    while true; do
+
+        echo "===== Devices Management ====="
+        echo "1- Change CPU Policy"
+        echo "2- Set Battery Threshold (60%)"
+        echo "3- Control Caps Lock LED"
+        echo "0- Back"
+
+        read -rp "Enter Choice: " choice
+
+        case "$choice" in
+
+            1)
+                echo "===== CPU POLICY ====="
+
+                policy="/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+
+                if [[ -f "$policy" ]]; then
+
+                    echo "1- Performance"
+                    echo "2- Powersave"
+
+                    read -rp "Choose Policy: " cpu_choice
+
+                    case "$cpu_choice" in
+                        1) governor="performance" ;;
+                        2) governor="powersave" ;;
+                        *)
+                            echo "Invalid Choice"
+                            continue
+                            ;;
+                    esac
+
+                    if grep -qw "$governor" \
+                        /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors; then
+
+                        if echo "$governor" > "$policy"; then
+                            echo "CPU Policy Changed to: $governor"
+                        else
+                            echo "Failed to change CPU Policy"
+                        fi
+
+                    else
+                        echo "This CPU Policy is Not Supported"
+                    fi
+
+                else
+                    echo "CPU Policy Control: Not Supported"
+                fi
+                ;;
+
+            2)
+                echo "===== BATTERY THRESHOLD ====="
+
+                threshold="/sys/class/power_supply/BAT0/charge_control_end_threshold"
+
+                if [[ -f "$threshold" ]]; then
+
+                    if echo 60 > "$threshold"; then
+                        echo "Battery Threshold Set to 60%"
+                    else
+                        echo "Failed to set Battery Threshold"
+                    fi
+
+                else
+                    echo "Battery Threshold Control: Not Supported"
+                fi
+                ;;
+
+            3)
+                echo "===== CAPS LOCK LED ====="
+
+                led="/sys/class/leds/input2::capslock/brightness"
+
+                if [[ -f "$led" ]]; then
+
+                    echo "1- LED ON"
+                    echo "2- LED OFF"
+
+                    read -rp "Enter Choice: " led_choice
+
+                    case "$led_choice" in
+                        1)
+                            if echo 1 > "$led"; then
+                                echo "Caps Lock LED: ON"
+                            else
+                                echo "Failed to turn LED ON"
+                            fi
+                            ;;
+
+                        2)
+                            if echo 0 > "$led"; then
+                                echo "Caps Lock LED: OFF"
+                            else
+                                echo "Failed to turn LED OFF"
+                            fi
+                            ;;
+
+                        *)
+                            echo "Invalid Choice"
+                            ;;
+                    esac
+
+                else
+                    echo "Caps Lock LED Control: Not Supported"
+                fi
+                ;;
+
+            0)
+                break
+                ;;
+
+            *)
+                echo "Invalid Choice"
+                ;;
+
+        esac
+
+    done
+}
+
 while true; do 
 
     echo "===================="
@@ -153,13 +276,18 @@ while true; do
             ram_info
             disk_info
             ;;
-        2)
+        2)  
+            if [[ $MODE == "ADMIN" ]]; then 
+                devices_management
+            else 
+                echo "access denied"
+            fi
             ;;
         3)
             ;;    
         4)
             if [[ $MODE == "ADMIN" ]]; then 
-                echo "4"
+                devices_management
             else 
                 echo "access denied"
             fi
